@@ -11,4 +11,3 @@ Gallery:
 
 https://docs.google.com/document/d/13h6d35Ily_QobpCk3xNivwm4WW_b36pTXpNITnFWPOo/edit?usp=sharing
 
-
