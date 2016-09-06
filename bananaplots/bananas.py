@@ -186,7 +186,7 @@ class GMMSurface(Surface):
             nb : number of bins in the interplation from ln_prob to CL
             nc : number of components to model the distribution.
             cov : type of covariance. 'full', 'diag', 'tied', 'spherical'
-                
+
             Returns
             -------
             lnprob, confidence
@@ -206,33 +206,48 @@ class GMMSurface(Surface):
         confidence_levels = 1 - numpy.logspace(-5, 0, num=nb)
         lnprob_cl = numpy.percentile(lnprob, 100 - confidence_levels * 100.)
 
-        def func1(*args):
+        def lnprobf(*args):
             args = numpy.array(numpy.broadcast_arrays(*args), copy=True)
             shape = args[0].shape
             args = args.reshape(len(args), -1)
             lnprob = model.score(args.T).reshape(shape)
             return lnprob
 
-        def func2(*args):
-            lnprob = func1(*args)
+        def cl(*args):
+            lnprob = lnprobf(*args)
             return numpy.interp(lnprob, lnprob_cl, confidence_levels)
 
-        return func1, func2
+        return lnprobf, cl
 
-class CombinedSurface(Surface):
-    def __init__(self, *surfaces):
-        raise RuntimeError("I don't think this is correct. How to pass in the covariance")
-        s = []
-        # apply the association rule
-        # but do not go deeper for nested.
-        for surface in surfaces:
-            print(surface)
-            if isinstance(surface, CombinedSurface):
-                s.extend(surface.surfaces)
-            else:
-                s.append(surface)
-        self.surfaces = s
-        print(self.surfaces)
+if False:
+  class FrozenSurface(Surface):
+    def __init__(self, lnprob_cl_mapping, model):
+        """
+            Creates a picklable Frozen surface from a picklable model and a cl mapping.
+
+            Parameters
+            ----------
+            clmapping : pairs of lnprob, confidence level.
+            model : a model.
+
+        """
+        clmapping = numpy.array(lnprob_cl_mapping)
+        assert clmapping.shape[1] == 2
+        self.model = model
 
     def compile(self, features, **kwargs):
-        raise
+        model = self.model
+        lnprob_cl, confidence_levels = self.clmapping.T
+
+        def lnprobf(*args):
+            args = numpy.array(numpy.broadcast_arrays(*args), copy=True)
+            shape = args[0].shape
+            args = args.reshape(len(args), -1)
+            lnprob = model.score(args.T).reshape(shape)
+            return lnprob
+
+        def cl(*args):
+            lnprob = lnprobf(*args)
+            return numpy.interp(lnprob, lnprob_cl, confidence_levels)
+
+        return lnprobf, cl
