@@ -81,7 +81,7 @@ class Bananas(object):
             compiler_options = attrs['compiler_options']
             lnprob, cl = surface.compile((f1, ), **compiler_options)
             Z = numpy.exp(lnprob(x))
-            axes.plot(x, Z, label=attrs['label'], color=attrs['cmap'](0.0))
+            axes.plot(x, Z, label=attrs['label'], color=attrs['cmap'](0.3))
 
     def get_legend_handlers_labels(self):
         from matplotlib import patches as mpatches
@@ -89,7 +89,7 @@ class Bananas(object):
         labels = []
         for surface, attrs in _sorteditems(self.surfaces, 'order'):
             cmap = attrs['cmap']
-            proxies.append(mpatches.Patch(color=cmap(0.6)))
+            proxies.append(mpatches.Patch(color=cmap(0.3)))
             labels.append(attrs['label'])
         return proxies, labels
 
