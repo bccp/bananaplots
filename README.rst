@@ -1,6 +1,9 @@
 bananaplots
 ===========
 
+.. image:: https://travis-ci.org/bccp/bananaplots.svg?branch=master
+       :target: https://travis-ci.org/bccp/bananaplots
+
 A simple tool for making banana plots from several multi-dimensional point datasets.
 
 The term banana here refers to the usual shape of the contours of two feature projection of the datasets. See the gallery to see the graphical motivation. 
