@@ -18,10 +18,21 @@ before_install:
     - conda update --yes conda
 
 install:
-    - conda create --yes -n test python=$TRAVIS_PYTHON_VERSION numpy=$NUMPY_VERSION nose
+    - conda create --yes -n test python=$TRAVIS_PYTHON_VERSION numpy=$NUMPY_VERSION nose scikit-learn
     - source activate test
     - python setup.py install
 
 script: 
     - python runtests.py
+    - bash check_tag.sh bananas/bananas.py
 
+deploy:
+    - provider: pypi
+      distributions: sdist
+      server: https://pypi.python.org/pypi
+      user: "rainwoodman"
+      password:
+        secure: "hrtIbkpES6B4SWvm1ZJMWG0gpwG0o/zYNCKaROHJpX5X5NawWsMzBvPF6+Scl24qHYedOP1b0cvLDCNFZofeRfByCIKADhhzgOsQrUbcsaky4agyXkrxMoJo2U7tA5ESBuZVuYR/DHA5lIXjXKtrtatDjSxL6Up5Gi4y99e6DgvmrO8H4WK0ASvoFqaTZdT4NAjDRV5vqh7wIQZt1LfvsVGFyBdFB7w/pygzqR4ppdINt7uXzdB8x5eM3/j/P4uoZOoS/j7uLRTXmojeyKJsM3uJTVTs5hoxVR0dsKCmpFDUsmFEAdnd2UkpyKSo1J/FmSHvs9D812T/4eV2tmYIK9DIXF8THq0Eqsm1IRXuX1twNaxr9mbiWuI3JPQtVYqaX0T73HYjpIDpNdjaMrMUWqwQ/7b/ruBODuhaeLrtH8r+kzc5YfSyY1+7io9TAPZxTaN/Csj7/ve1x9KY7/mWu9/7y5XdteR4uIzTVDOPw0dyMc25MEoxQVeIp0LOKXQbA3Wdp6YBFrgeGo3LPivgZTwwD2xJj+WFY/22BTZIUfSlO2tFguL7u6U7aTVSzq2kQF9FmP9OOU++27XtheqkG10ONRMVsdAl+PKW1/UGRQCpLb1yfDWz8/MpmwDv4t9ug/kBLx+3KAffNbuV8xkIYUa6dUs4k7B9wD1m9XlGtGE="
+      on:
+        tags   : true
+        condition : $TRAVIS_PYTHON_VERSION = "2.7"
