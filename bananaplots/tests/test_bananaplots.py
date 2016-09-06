@@ -25,7 +25,7 @@ def test_bananas():
 
     banana.add_surface(s1, label="S1", cmap=cm.Reds_r)
     banana.add_surface(s2, label="S2", cmap=cm.Blues_r)
-    banana.add_surface(s3, label="S1 + S2", cmap=cm.Greens_r, compiler=dict(nc=2))
+    banana.add_surface(s3, label="S1 + S2", cmap=cm.Greens_r, compiler_options=dict(nc=2))
 
     banana.set_feature("X", range=(-6, 6))
     banana.set_feature("Y", range=(-6, 6))

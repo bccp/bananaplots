@@ -28,7 +28,7 @@ class Bananas(object):
                     order=self._unique,
                     label=str(surface),
                     cmap=cm.jet,
-                    compiler={},
+                    compiler_options={},
                     )
             self._unique = self._unique + 10
         self.surfaces[surface].update(attrs)
@@ -45,29 +45,32 @@ class Bananas(object):
             self._unique = self._unique + 10
         self.features[feature].update(attrs)
 
-    def render(self, axes, f1, f2):
+    def render(self, axes, f1, f2, **options):
         axes.set_xlabel(self.features[f1]['label'])
         axes.set_ylabel(self.features[f2]['label'])
+
         x = numpy.linspace(*self.features[f1]['range'], num=512)
         y = numpy.linspace(*self.features[f2]['range'], num=512)
         X, Y = numpy.meshgrid(x, y)
 
         for surface, attrs in _sorteditems(self.surfaces, 'order'):
-            compiler_attrs = attrs['compiler']
-            func = surface.compile((f1, f2), **compiler_attrs)
+            compiler_options = attrs['compiler_options']
+            func = surface.compile((f1, f2), **compiler_options)
             Z = func(X, Y)
 
-            levels = numpy.linspace(0.0, 1.0, 20, endpoint=True)
-            res = findcl(func, X, Y, levels=levels)
-            assert (numpy.diff(res) <= 0).all()
-            Z = numpy.interp(Z, res[::-1], levels[::-1])
+            if options.pop('filled', True):
+                CS = axes.contourf(X, Y, Z,
+                        levels=[0, 0.68, 0.95],
+                        vmin=0.0, vmax=1.0,
+                        cmap=attrs['cmap'], alpha=0.7)
+
             CS = axes.contour(X, Y, Z,
                     levels=[0.68, 0.95],
-                    vmin=0.6, vmax=1.0,
-                    cmap=attrs['cmap'],
-                    label=attrs['label'], alpha=1.0)
+                    vmin=0.0, vmax=2.0,
+                    cmap=attrs['cmap'])
 
-            TXT = axes.clabel(CS)
+            if options.pop('contour_labels', False):
+                TXT = axes.clabel(CS)
 
     def get_legend_handlers_labels(self):
         from matplotlib import patches as mpatches
@@ -75,7 +78,7 @@ class Bananas(object):
         labels = []
         for surface, attrs in _sorteditems(self.surfaces, 'order'):
             cmap = attrs['cmap']
-            proxies.append(mpatches.Patch(color=cmap(0.7)))
+            proxies.append(mpatches.Patch(color=cmap(0.6)))
             labels.append(attrs['label'])
         return proxies, labels
 
@@ -134,7 +137,19 @@ class GMMSurface(Surface):
                     [self.features[feature], other.features[feature]])
         return GMMSurface(**features)
 
-    def compile(self, features, nc=1):
+    def compile(self, features, nc=1, nb=20):
+        """ compile the GMM to a function that returns
+            confidence level as a function of features.
+
+            We evaluate the log probability on all data points,
+            then look for the percentiles. 
+
+            Parameters
+            ----------
+            nb : number of bins in the interplation from ln_prob to CL
+            nc : number of components to model the distribution.
+
+        """
         data = []
         for feature in features:
             # only 1d feature is supported
@@ -145,11 +160,17 @@ class GMMSurface(Surface):
 
         model = GMM(nc)
         model.fit(data.T)
+        lnprob = model.score(data.T)
+        confidence_levels = 1 - numpy.logspace(-5, 0, num=nb)
+        lnprob_cl = numpy.percentile(lnprob, 100 - confidence_levels * 100.)
+
         def func(*args):
             args = numpy.array(numpy.broadcast_arrays(*args), copy=True)
             shape = args[0].shape
             args = args.reshape(len(args), -1)
-            return numpy.exp(model.score(args.T).reshape(shape))
+            lnprob = model.score(args.T).reshape(shape)
+            return numpy.interp(lnprob, lnprob_cl, confidence_levels)
+
         return func
 
 class CombinedSurface(Surface):
@@ -168,13 +189,4 @@ class CombinedSurface(Surface):
         print(self.surfaces)
 
     def compile(self, features, **kwargs):
-        frozen = []
-        for s in self.surfaces:
-            frozen.append(s.compile(features, **kwargs))
-        def func(*args):
-            s = []
-            for f in frozen:
-                s.append(f(*args))
-            # FIXME: use the product because we shall return a probability density
-            return sum(s)
-        return func
+        raise
