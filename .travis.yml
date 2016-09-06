@@ -18,7 +18,7 @@ before_install:
     - conda update --yes conda
 
 install:
-    - conda create --yes -n test python=$TRAVIS_PYTHON_VERSION numpy=$NUMPY_VERSION nose scikit-learn
+    - conda create --yes -n test python=$TRAVIS_PYTHON_VERSION numpy=$NUMPY_VERSION nose scikit-learn matplotlib
     - source activate test
     - python setup.py install
 
