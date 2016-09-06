@@ -30,8 +30,8 @@ Generate C code coverage listing under build/lcov/:
 # framework. Change the following values to adapt to your project:
 #
 
-PROJECT_MODULE = "bananaplots"
-PROJECT_ROOT_FILES = ['bananaplots', 'LICENSE', 'setup.py']
+PROJECT_MODULE = "bananas"
+PROJECT_ROOT_FILES = ['bananas', 'LICENSE', 'setup.py']
 SAMPLE_TEST = "scipy/special/tests/test_basic.py:test_xlogy"
 SAMPLE_SUBMODULE = "optimize"
 

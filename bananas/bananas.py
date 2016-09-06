@@ -1,5 +1,7 @@
 import numpy
 
+__version__ = "0.0.1"
+
 def _sorteditems(d, orderby):
     """ return items from a dict of dict, sorted by the orderby item of the dict """
     s = sorted([(i[orderby], k) for k, i in d.items()])
