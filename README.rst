@@ -17,15 +17,11 @@ Here is an example code:
 
 https://github.com/bccp/bananaplots/blob/master/bananaplots/tests/test_bananaplots.py#L15
 
-which produces the follower two figures.
+which produces the following two figures.
 
 .. image:: https://raw.githubusercontent.com/bccp/bananaplots/master/docs/bananas-upper-right.png
     
-    A stack of bananas to the upper right corner
-
 .. image:: https://raw.githubusercontent.com/bccp/bananaplots/master/docs/bananas-lower-left.png
-
-    A stack of bananas to the lower left corner
 
 
 Notes
