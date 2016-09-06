@@ -15,5 +15,5 @@ setup(name="bananaplots",
       version=find_version("bananas/bananas.py"),
       description="Plot bananas",
       packages=["bananas", "bananas.tests"],
-      requires=['scikit_learn'],
+      requires=['scikit_learn', 'matplotlib', 'numpy', 'scipy'],
     )
