@@ -19,11 +19,11 @@ https://github.com/bccp/bananaplots/blob/master/bananaplots/tests/test_bananaplo
 
 which produces the follower two figures.
 
-.. image:: https://github.com/bccp/bananaplots/raw/master/docs/bananas-upper-right.png
+.. image:: https://raw.githubusercontent.com/bccp/bananaplots/master/docs/bananas-upper-right.png
     
     A stack of bananas to the upper right corner
 
-.. image:: https://github.com/bccp/bananaplots/raw/master/docs/bananas-lower-left.png
+.. image:: https://raw.githubusercontent.com/bccp/bananaplots/master/docs/bananas-lower-left.png
 
     A stack of bananas to the lower left corner
 
