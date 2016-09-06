@@ -9,8 +9,6 @@ import matplotlib
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib import cm
-from matplotlib.gridspec import GridSpec
-from matplotlib.ticker import NullFormatter
 
 from numpy.random import normal
 
@@ -38,37 +36,26 @@ def test_bananas():
     banana.set_feature("Z", range=(-6, 6))
 
     fig = Figure()
-    gs = GridSpec(3, 3, hspace=0, wspace=0)
 
-    axes = {}
-    for i, f in zip(range(3), "XYZ"):
-        ax = fig.add_subplot(gs[i, i])
-        banana.render1d(ax, f)
-        ax.locator_params(axis='y', nbins=5)
-        ax.yaxis.set_major_formatter(NullFormatter())
-        axes[i, i] = ax
-
-    for i, j in [(1, 0), (2, 0), (2, 1)]:
-        ax = fig.add_subplot(gs[i, j])
-        banana.render(ax, "XYZ"[j], "XYZ"[i])
-        axes[i, j] = ax
-
-    for (i, j), ax in axes.items():
-        if i != 2:
-            ax.xaxis.set_major_formatter(NullFormatter())
-            ax.xaxis.get_label().set_visible(False)
-        if j != 0:
-            ax.yaxis.set_major_formatter(NullFormatter())
-            ax.yaxis.get_label().set_visible(False)
-        ax.locator_params(axis='y', prune='both')
-        ax.locator_params(axis='x', prune='both')
+    axes = banana.rendernd(fig, ["X", "Y", "Z"])
 
     handlers, labels = banana.get_legend_handlers_labels()
-    fig.legend(handlers, labels, loc='center', bbox_to_anchor=gs[0, -1].get_position(fig))
+    axes[0, 2].legend(handlers, labels, loc='center')
 
     canvas = FigureCanvasAgg(fig)
-#    fig.tight_layout()
-    fig.savefig("bananas.pdf")
+    fig.tight_layout()
+    fig.savefig("bananas-lower-left.pdf")
+
+    fig = Figure()
+
+    axes = banana.rendernd(fig, ["X", "Y", "Z"], corner='upper right')
+
+    handlers, labels = banana.get_legend_handlers_labels()
+    axes[2, 0].legend(handlers, labels, loc='center')
+
+    canvas = FigureCanvasAgg(fig)
+    fig.tight_layout()
+    fig.savefig("bananas-upper-right.pdf")
 
 if __name__ == '__main__':
     unittest.main()

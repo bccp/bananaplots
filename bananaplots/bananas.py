@@ -83,6 +83,57 @@ class Bananas(object):
             Z = numpy.exp(lnprob(x))
             axes.plot(x, Z, label=attrs['label'], color=attrs['cmap'](0.3))
 
+    def rendernd(self, figure, features, gridspec=None, **options):
+        from matplotlib.gridspec import GridSpec
+        from matplotlib.ticker import NullFormatter
+        from itertools import product
+
+        if gridspec is None:
+            gridspec = GridSpec(len(features), len(features), hspace=0, wspace=0)
+
+        corner = options.pop('corner', 'lower left')
+
+        axes = {}
+
+        config = {
+                'upper right' : [lambda i, j : i < j, (0, 'top', len(features) - 1, 'right')],
+                'lower left' :  [lambda i, j : i > j, (len(features) - 1, 'bottom', 0, 'left')]
+                }
+
+        for i, j in product(range(len(features)), range(len(features))):
+            ax = figure.add_subplot(gridspec[i, j])
+            axes[i, j] = ax
+            visible = config[corner][0]
+            if i == j:
+                self.render1d(ax, features[i])
+                ax.locator_params(axis='y', nbins=5)
+                ax.yaxis.set_major_formatter(NullFormatter())
+                continue
+
+            if visible(i, j):
+                self.render(ax, features[j], features[i])
+            else:
+                ax.set_axis_off()
+
+        for (i, j), ax in axes.items():
+            ax.locator_params(axis='y', prune='both')
+            ax.locator_params(axis='x', prune='both')
+
+        for (i, j), ax in axes.items():
+            xedge, xpos, yedge, ypos = config[corner][1]
+            if i != xedge:
+                ax.xaxis.set_major_formatter(NullFormatter())
+                ax.xaxis.get_label().set_visible(False)
+            else:
+                ax.xaxis.set_label_position(xpos)
+            if j != yedge:
+                ax.yaxis.set_major_formatter(NullFormatter())
+                ax.yaxis.get_label().set_visible(False)
+            else:
+                ax.yaxis.set_label_position(ypos)
+
+        return axes
+
     def get_legend_handlers_labels(self):
         from matplotlib import patches as mpatches
         proxies = []
