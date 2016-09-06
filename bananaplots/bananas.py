@@ -1,6 +1,7 @@
 import numpy
 
 def _sorteditems(d, orderby):
+    """ return items from a dict of dict, sorted by the orderby item of the dict """
     s = sorted([(i[orderby], k) for k, i in d.items()])
     return [(k, d[k]) for i, k in s]
 
@@ -55,8 +56,8 @@ class Bananas(object):
 
         for surface, attrs in _sorteditems(self.surfaces, 'order'):
             compiler_options = attrs['compiler_options']
-            func = surface.compile((f1, f2), **compiler_options)
-            Z = func(X, Y)
+            lnprob, cl = surface.compile((f1, f2), **compiler_options)
+            Z = cl(X, Y)
 
             if options.pop('filled', True):
                 CS = axes.contourf(X, Y, Z,
@@ -71,6 +72,16 @@ class Bananas(object):
 
             if options.pop('contour_labels', False):
                 TXT = axes.clabel(CS)
+
+    def render1d(self, axes, f1, **options):
+        axes.set_xlabel(self.features[f1]['label'])
+        x = numpy.linspace(*self.features[f1]['range'], num=512)
+
+        for surface, attrs in _sorteditems(self.surfaces, 'order'):
+            compiler_options = attrs['compiler_options']
+            lnprob, cl = surface.compile((f1, ), **compiler_options)
+            Z = numpy.exp(lnprob(x))
+            axes.plot(x, Z, label=attrs['label'], color=attrs['cmap'](0.0))
 
     def get_legend_handlers_labels(self):
         from matplotlib import patches as mpatches
@@ -112,9 +123,9 @@ class GMMSurface(Surface):
                     [self.features[feature], other.features[feature]])
         return GMMSurface(**features)
 
-    def compile(self, features, nc=1, nb=20):
+    def compile(self, features, nc=1, nb=20, cov="full", ):
         """ compile the GMM to a function that returns
-            confidence level as a function of features.
+            ln_prob and confidence level as a function of features.
 
             We evaluate the log probability on all data points,
             then look for the percentiles. 
@@ -123,6 +134,11 @@ class GMMSurface(Surface):
             ----------
             nb : number of bins in the interplation from ln_prob to CL
             nc : number of components to model the distribution.
+            cov : type of covariance. 'full', 'diag', 'tied', 'spherical'
+                
+            Returns
+            -------
+            lnprob, confidence
 
         """
         data = []
@@ -133,20 +149,24 @@ class GMMSurface(Surface):
 
         data = numpy.concatenate(data, axis=0)
 
-        model = GMM(nc)
+        model = GMM(nc, covariance_type=cov)
         model.fit(data.T)
         lnprob = model.score(data.T)
         confidence_levels = 1 - numpy.logspace(-5, 0, num=nb)
         lnprob_cl = numpy.percentile(lnprob, 100 - confidence_levels * 100.)
 
-        def func(*args):
+        def func1(*args):
             args = numpy.array(numpy.broadcast_arrays(*args), copy=True)
             shape = args[0].shape
             args = args.reshape(len(args), -1)
             lnprob = model.score(args.T).reshape(shape)
+            return lnprob
+
+        def func2(*args):
+            lnprob = func1(*args)
             return numpy.interp(lnprob, lnprob_cl, confidence_levels)
 
-        return func
+        return func1, func2
 
 class CombinedSurface(Surface):
     def __init__(self, *surfaces):

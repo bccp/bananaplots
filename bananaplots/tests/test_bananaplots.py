@@ -31,12 +31,20 @@ def test_bananas():
     banana.set_feature("Y", range=(-6, 6))
 
     fig = Figure()
-    ax = fig.add_subplot(111)
+    ax = fig.add_subplot(223)
     banana.render(ax, "X", "Y")
 
+    ax = fig.add_subplot(221)
+    banana.render1d(ax, "X")
+
+    ax = fig.add_subplot(224)
+    banana.render1d(ax, "Y")
+
     handlers, labels = banana.get_legend_handlers_labels()
-    ax.legend(handlers, labels)
+    fig.legend(handlers, labels, loc='center', bbox_to_anchor=(0.5, 0.5, 0.5, 0.5))
+
     canvas = FigureCanvasAgg(fig)
+
     fig.savefig("bananas.pdf")
 
 if __name__ == '__main__':
