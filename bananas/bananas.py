@@ -1,6 +1,6 @@
 import numpy
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 def _sorteditems(d, orderby):
     """ return items from a dict of dict, sorted by the orderby item of the dict """
