@@ -12,6 +12,7 @@ from matplotlib import cm
 from numpy.random import normal
 
 def test_bananas():
+    numpy.random.seed(1234)
     s1 = bananaplots.GMMSurface(
             X=numpy.concatenate([normal(size=10000), normal(size=10000)]),
             Y=numpy.concatenate([normal(size=10000), normal(size=10000)])
@@ -26,13 +27,15 @@ def test_bananas():
     banana.add_surface(s2, label="S2", cmap=cm.Blues_r)
     banana.add_surface(s3, label="S1 + S2", cmap=cm.Greens_r, compiler=dict(nc=2))
 
-    banana.set_feature("X", range=(-5, 5))
-    banana.set_feature("Y", range=(-5, 5))
+    banana.set_feature("X", range=(-6, 6))
+    banana.set_feature("Y", range=(-6, 6))
 
     fig = Figure()
     ax = fig.add_subplot(111)
     banana.render(ax, "X", "Y")
-    ax.legend()
+
+    handlers, labels = banana.get_legend_handlers_labels()
+    ax.legend(handlers, labels)
     canvas = FigureCanvasAgg(fig)
     fig.savefig("bananas.pdf")
 
