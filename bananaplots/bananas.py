@@ -82,31 +82,6 @@ class Bananas(object):
             labels.append(attrs['label'])
         return proxies, labels
 
-from scipy.optimize import minimize
-def findcl(func, X, Y, levels):
-    XC = (X[1:, 1:] + X[:-1, :-1]) * 0.5
-    YC = (Y[1:, 1:] + Y[:-1, :-1]) * 0.5
-    A = abs((X[1:, 1:] - X[:-1, :-1]) * (Y[1:, 1:] - Y[:-1, :-1]))
-    ZC = func(XC, YC)
-    ZA = ZC * A
-    r = []
-    last = ZC.max()
-    for level in levels:
-        if level >= 1.0:
-            r.append(0)
-            continue
-        if level <= 0.0:
-            r.append(ZC.max())
-            continue
-
-        def cost(thresh):
-            mask = ZC > thresh[0]
-            cost = (ZA[mask].sum() - level) ** 2
-            return cost
-        res = minimize(cost, (last, ), method='Nelder-Mead')
-        r.append(res.x[0])
-    return numpy.array(r)
-
 class Surface(object):
     def __add__(self, other):
         return CombinedSurface(self, other)
