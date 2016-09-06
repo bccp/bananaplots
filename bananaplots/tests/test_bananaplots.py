@@ -44,7 +44,7 @@ def test_bananas():
 
     canvas = FigureCanvasAgg(fig)
     fig.tight_layout()
-    fig.savefig("bananas-lower-left.pdf")
+    fig.savefig("bananas-lower-left.png")
 
     fig = Figure()
 
@@ -55,7 +55,7 @@ def test_bananas():
 
     canvas = FigureCanvasAgg(fig)
     fig.tight_layout()
-    fig.savefig("bananas-upper-right.pdf")
+    fig.savefig("bananas-upper-right.png")
 
 if __name__ == '__main__':
     unittest.main()
