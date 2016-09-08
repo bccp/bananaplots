@@ -58,8 +58,8 @@ class Bananas(object):
 
         for surface, attrs in _sorteditems(self.surfaces, 'order'):
             compiler_options = attrs['compiler_options']
-            lnprob, cl = surface.compile((f1, f2), **compiler_options)
-            Z = cl(X, Y)
+            m = surface.compile((f1, f2), **compiler_options)
+            Z = m.confidence(X, Y)
 
             if options.pop('filled', True):
                 CS = axes.contourf(X, Y, Z,
@@ -81,8 +81,8 @@ class Bananas(object):
 
         for surface, attrs in _sorteditems(self.surfaces, 'order'):
             compiler_options = attrs['compiler_options']
-            lnprob, cl = surface.compile((f1, ), **compiler_options)
-            Z = numpy.exp(lnprob(x))
+            m = surface.compile((f1, ), **compiler_options)
+            Z = numpy.exp(m.lnprob(x))
             axes.plot(x, Z, label=attrs['label'], color=attrs['cmap'](0.3))
 
     def rendernd(self, figure, features, gridspec=None, **options):
@@ -176,6 +176,18 @@ class GMMSurface(Surface):
                     [self.features[feature], other.features[feature]])
         return GMMSurface(**features)
 
+    def freeze(self, nc=1, nb=20, cov="full"):
+        cache = {}
+        # freeze 1d models
+        for f1 in self.features:
+            cache[(f1, )] = self.compile([f1], nc, nb, cov)
+
+        # freeze 2d models
+        for f1, f2 in product(self.features, self.features):
+            cache[(f1, f2)] = self.compile([f1, f2], nc, nb, cov) 
+
+        return FrozenSurface(cache)
+
     def compile(self, features, nc=1, nb=20, cov="full", ):
         """ compile the GMM to a function that returns
             ln_prob and confidence level as a function of features.
@@ -207,23 +219,29 @@ class GMMSurface(Surface):
         lnprob = model.score(data.T)
         confidence_levels = 1 - numpy.logspace(-5, 0, num=nb)
         lnprob_cl = numpy.percentile(lnprob, 100 - confidence_levels * 100.)
+        confidence_table = numpy.array([lnprob_cl, confidence_levels])
 
-        def lnprobf(*args):
-            args = numpy.array(numpy.broadcast_arrays(*args), copy=True)
-            shape = args[0].shape
-            args = args.reshape(len(args), -1)
-            lnprob = model.score(args.T).reshape(shape)
-            return lnprob
+        return Marginalized(model, confidence_table)
 
-        def cl(*args):
-            lnprob = lnprobf(*args)
-            return numpy.interp(lnprob, lnprob_cl, confidence_levels)
+class Marginalized(object):
+    def __init__(self, model, confidence_table):
+        self.model = model
+        self.confidence_table = confidence_table 
 
-        return lnprobf, cl
+    def lnprob(self, *args):
+        args = numpy.array(numpy.broadcast_arrays(*args), copy=True)
+        shape = args[0].shape
+        args = args.reshape(len(args), -1)
+        lnprob = self.model.score(args.T).reshape(shape)
+        return lnprob
 
-if False:
-  class FrozenSurface(Surface):
-    def __init__(self, lnprob_cl_mapping, model):
+    def confidence(self, *args):
+        x, y = self.confidence_table
+        lnprob = self.lnprob(*args)
+        return numpy.interp(lnprob, x, y)
+
+class FrozenSurface(Surface):
+    def __init__(self, cache, metadata):
         """
             Creates a picklable Frozen surface from a picklable model and a cl mapping.
 
@@ -233,23 +251,11 @@ if False:
             model : a model.
 
         """
-        clmapping = numpy.array(lnprob_cl_mapping)
-        assert clmapping.shape[1] == 2
-        self.model = model
+        self.cache = cache
+        self.metadata = metadata
+
+    def freeze(self):
+        return self
 
     def compile(self, features, **kwargs):
-        model = self.model
-        lnprob_cl, confidence_levels = self.clmapping.T
-
-        def lnprobf(*args):
-            args = numpy.array(numpy.broadcast_arrays(*args), copy=True)
-            shape = args[0].shape
-            args = args.reshape(len(args), -1)
-            lnprob = model.score(args.T).reshape(shape)
-            return lnprob
-
-        def cl(*args):
-            lnprob = lnprobf(*args)
-            return numpy.interp(lnprob, lnprob_cl, confidence_levels)
-
-        return lnprobf, cl
+        return self.cache[tuple(features)]
