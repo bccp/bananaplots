@@ -13,23 +13,26 @@ from matplotlib import cm
 from numpy.random import normal
 
 def test_bananas():
+    """ Overall integration test """
+
     numpy.random.seed(1234)
     s1 = bananas.GMMSurface(
-            X=numpy.concatenate([normal(size=10000), normal(size=10000)]),
-            Y=numpy.concatenate([normal(size=10000), normal(size=10000)]),
-            Z=numpy.concatenate([normal(size=10000), normal(size=10000)]),
+            X=numpy.concatenate([normal(size=2000)]),
+            Y=numpy.concatenate([normal(size=2000)]),
+            Z=numpy.concatenate([normal(size=2000)]),
         )
     s2 = bananas.GMMSurface(
-            X=2 + normal(size=10000),
-            Y=normal(size=10000), 
-            Z=1 + normal(size=10000), 
+            X=1 + normal(size=4000),
+            Y=2 + normal(size=4000), 
+            Z=3 + normal(size=4000), 
             )
 
+    #s3 = (s1 + s2).freeze()
     banana = bananas.Bananas()
 
     banana.add_surface(s1, label="S1", cmap=cm.Reds_r)
     banana.add_surface(s2, label="S2", cmap=cm.Blues_r)
-    banana.add_surface(s1 + s2, label="S1 + S2", cmap=cm.Greens_r, compiler_options=dict(nc=2))
+    #banana.add_surface(s3, label="S1 + S2", cmap=cm.Greens_r, compiler_options=dict(nc=2))
 
     banana.set_feature("X", range=(-6, 6))
     banana.set_feature("Y", range=(-6, 6))
@@ -37,7 +40,7 @@ def test_bananas():
 
     fig = Figure()
 
-    axes = banana.rendernd(fig, ["X", "Y", "Z"])
+    axes = banana.rendernd(fig, ["X", "Y", "Z"], nc=1, nb=100)
 
     handlers, labels = banana.get_legend_handlers_labels()
     axes[0, 2].legend(handlers, labels, loc='center')
@@ -60,19 +63,57 @@ def test_bananas():
 def test_freeze():
     numpy.random.seed(1234)
     s1 = bananas.GMMSurface(
-            X=numpy.concatenate([normal(size=10000), normal(size=10000)]),
-            Y=numpy.concatenate([normal(size=10000), normal(size=10000)]),
-            Z=numpy.concatenate([normal(size=10000), normal(size=10000)]),
+            X=numpy.concatenate([normal(size=1000), normal(size=1000)]),
+            Y=numpy.concatenate([normal(size=1000), normal(size=1000)]),
+            Z=numpy.concatenate([normal(size=1000), normal(size=1000)]),
         )
     s2 = bananas.GMMSurface(
-            X=2 + normal(size=10000),
-            Y=normal(size=10000), 
-            Z=1 + normal(size=10000), 
+            X=2 + normal(size=1000),
+            Y=normal(size=1000), 
+            Z=1 + normal(size=1000), 
             )
 
     import pickle
-    f2 = s2.freeze()
+    f2 = s2.freeze(nc=20, nb=100)
     s = pickle.dumps(f2)
+    print(len(s))
+    f2 = pickle.loads(s)
+
+def test_1d():
+    """ Overall integration test """
+
+    numpy.random.seed(1234)
+    s1 = bananas.GMMSurface(
+            X=numpy.concatenate([normal(size=2000)]),
+        )
+    #numpy.random.seed(1234)
+    s2 = bananas.GMMSurface(
+            X=0 + normal(size=3000),
+            )
+
+    #s3 = (s1 + s2).freeze()
+    banana = bananas.Bananas()
+
+    banana.add_surface(s1, label="S1", cmap=cm.Reds_r)
+    banana.add_surface(s2, label="S2", cmap=cm.Blues_r)
+    #banana.add_surface(s3, label="S1 + S2", cmap=cm.Greens_r, compiler_options=dict(nc=2))
+
+    banana.set_feature("X", range=(-6, 6))
+    banana.set_feature("Y", range=(-6, 6))
+    banana.set_feature("Z", range=(-6, 6))
+
+    fig = Figure()
+
+    axes = fig.add_subplot(111)
+
+    banana.render1d(axes, "X", nc=1, nb=100)
+
+    handlers, labels = banana.get_legend_handlers_labels()
+    axes.legend(handlers, labels, loc='center')
+
+    canvas = FigureCanvasAgg(fig)
+    fig.tight_layout()
+    fig.savefig("bananas-1d.png")
 
 if __name__ == '__main__':
     unittest.main()

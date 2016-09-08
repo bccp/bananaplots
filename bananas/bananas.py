@@ -147,10 +147,8 @@ class Bananas(object):
         return proxies, labels
 
 class Surface(object):
-    def __add__(self, other):
-        return CombinedSurface(self, other)
+    pass
 
-from sklearn.mixture import GMM
 class GMMSurface(Surface):
     """
         A log-likelyhood surface generated from Gausian mixture.
@@ -185,9 +183,13 @@ class GMMSurface(Surface):
 
         # freeze 2d models
         for f1, f2 in product(self.features, self.features):
-            cache[(f1, f2)] = self.compile([f1, f2], nc, nb, cov) 
+            if f1 == f2 : continue
+            if (f1, f2) in cache: continue
+            m = self.compile([f1, f2], nc, nb, cov) 
+            cache[(f1, f2)] = m
+            cache[(f2, f1)] = m
 
-        return FrozenSurface(cache, {})
+        return FrozenSurface(cache, dict(nc=nc, nb=nb, cov=cov))
 
     def compile(self, features, nc=1, nb=20, cov="full", ):
         """ compile the GMM to a function that returns
@@ -215,8 +217,16 @@ class GMMSurface(Surface):
 
         data = numpy.concatenate(data, axis=0)
 
-        model = GMM(nc, covariance_type=cov)
+        from sklearn import mixture
+
+        # XXX: Do not use DPGMM because the normalization is buggy
+        # https://github.com/scikit-learn/scikit-learn/issues/7371
+        model = mixture.GMM(nc, covariance_type=cov, n_iter=100)
         model.fit(data.T)
+
+        if not model.converged_:
+            raise ValueError("Your data is strange. Gaussian mixture failed to converge")
+
         lnprob = model.score(data.T)
         confidence_levels = 1 - numpy.logspace(-5, 0, num=nb)
         lnprob_cl = numpy.percentile(lnprob, 100 - confidence_levels * 100.)
@@ -246,8 +256,7 @@ class FrozenSurface(Surface):
         """
             Creates a picklable Frozen surface from a picklable model and a cl mapping.
 
-            Parameters
-            ----------
+            Parameters ----------
             clmapping : pairs of lnprob, confidence level.
             model : a model.
 
