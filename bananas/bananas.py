@@ -177,6 +177,7 @@ class GMMSurface(Surface):
         return GMMSurface(**features)
 
     def freeze(self, nc=1, nb=20, cov="full"):
+        from itertools import product
         cache = {}
         # freeze 1d models
         for f1 in self.features:
@@ -186,7 +187,7 @@ class GMMSurface(Surface):
         for f1, f2 in product(self.features, self.features):
             cache[(f1, f2)] = self.compile([f1, f2], nc, nb, cov) 
 
-        return FrozenSurface(cache)
+        return FrozenSurface(cache, {})
 
     def compile(self, features, nc=1, nb=20, cov="full", ):
         """ compile the GMM to a function that returns
@@ -253,6 +254,9 @@ class FrozenSurface(Surface):
         """
         self.cache = cache
         self.metadata = metadata
+
+    def __add__(self, other):
+        raise TypeError("Cannot add two frozen surfaces")
 
     def freeze(self):
         return self

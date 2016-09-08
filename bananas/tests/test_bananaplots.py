@@ -57,5 +57,22 @@ def test_bananas():
     fig.tight_layout()
     fig.savefig("bananas-upper-right.png")
 
+def test_freeze():
+    numpy.random.seed(1234)
+    s1 = bananas.GMMSurface(
+            X=numpy.concatenate([normal(size=10000), normal(size=10000)]),
+            Y=numpy.concatenate([normal(size=10000), normal(size=10000)]),
+            Z=numpy.concatenate([normal(size=10000), normal(size=10000)]),
+        )
+    s2 = bananas.GMMSurface(
+            X=2 + normal(size=10000),
+            Y=normal(size=10000), 
+            Z=1 + normal(size=10000), 
+            )
+
+    import pickle
+    f2 = s2.freeze()
+    s = pickle.dumps(f2)
+
 if __name__ == '__main__':
     unittest.main()
