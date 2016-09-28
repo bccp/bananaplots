@@ -26,7 +26,7 @@ class Bananas(object):
         """
         if not surface in self.surfaces:
             self.surfaces[surface] = dict(
-                    colorscheme='r',
+                    colorfamily='r',
                     order=self._unique,
                     label=None,
                     cmap=None,
@@ -57,7 +57,7 @@ class Bananas(object):
             return cmap(0.3)
 
         if attr == 'cmap':
-            color = f['colorscheme']
+            color = f['colorfamily']
             shorts = {'b' : 'blue',
                          'r' : 'red',
                          'g' : 'green',

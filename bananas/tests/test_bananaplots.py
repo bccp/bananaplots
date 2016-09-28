@@ -31,9 +31,9 @@ def test_bananas():
     s3 = (s1 + s2).freeze()
     banana = bananas.Bananas()
 
-    banana.add_surface(s1, label="S1", colorscheme='r')
-    banana.add_surface(s2, label="S2", colorscheme='b')
-    banana.add_surface(s3, label="S1 + S2", colorscheme='g', linestyle='--', compiler_options=dict(nc=2))
+    banana.add_surface(s1, label="S1", colorfamily='r')
+    banana.add_surface(s2, label="S2", colorfamily='b')
+    banana.add_surface(s3, label="S1 + S2", colorfamily='g', linestyle='--', compiler_options=dict(nc=2))
 
 #    banana.set_feature("X", range=(-6, 6))
 #    banana.set_feature("Y", range=(-3, 4))
