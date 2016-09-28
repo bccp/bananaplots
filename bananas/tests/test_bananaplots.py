@@ -17,12 +17,12 @@ def test_bananas():
 
     numpy.random.seed(1234)
     data = normal(size=(3, 2000))
-    s1 = bananas.GMMSurface(
+    s1 = bananas.MCSurface(
             X=bananas.Feature(data[0], vmin=-5, vmax=5, peak=0.0),
             Y=bananas.Feature(data[1], vmin=-5, vmax=5, peak=0.0),
             Z=bananas.Feature(data[2], vmin=-5, vmax=5, peak=0.0),
         )
-    s2 = bananas.GMMSurface(
+    s2 = bananas.MCSurface(
             X=bananas.Feature(1 + data[0], vmin=-5, vmax=5, peak=1.0),
             Y=bananas.Feature(2 + data[1], vmin=-5, vmax=5, peak=2.0),
             Z=bananas.Feature(3 + data[2], vmin=-5, vmax=5, peak=3.0),
@@ -66,12 +66,12 @@ def test_bananas():
 
 def test_freeze():
     numpy.random.seed(1234)
-    s1 = bananas.GMMSurface(
+    s1 = bananas.MCSurface(
             X=numpy.concatenate([normal(size=1000), normal(size=1000)]),
             Y=numpy.concatenate([normal(size=1000), normal(size=1000)]),
             Z=numpy.concatenate([normal(size=1000), normal(size=1000)]),
         )
-    s2 = bananas.GMMSurface(
+    s2 = bananas.MCSurface(
             X=2 + normal(size=1000),
             Y=normal(size=1000), 
             Z=1 + normal(size=1000), 
@@ -87,11 +87,11 @@ def test_1d():
     """ Overall integration test """
 
     numpy.random.seed(1234)
-    s1 = bananas.GMMSurface(
+    s1 = bananas.MCSurface(
             X=numpy.concatenate([normal(size=2000)]),
         )
     #numpy.random.seed(1234)
-    s2 = bananas.GMMSurface(
+    s2 = bananas.MCSurface(
             X=0 + normal(size=3000),
             )
 

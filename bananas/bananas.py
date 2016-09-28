@@ -266,7 +266,7 @@ class Feature(object):
                     vmax=numpy.max([self.vmax, other.vmax]),
                     peak=None)
 
-class GMMSurface(Surface):
+class MCSurface(Surface):
     """
         A log-likelyhood surface generated from Gausian mixture.
 
@@ -278,7 +278,7 @@ class GMMSurface(Surface):
             self.features[name] = Feature(feature)
 
     def __add__(self, other):
-        if not isinstance(other, GMMSurface):
+        if not isinstance(other, MCSurface):
             return Surface.__add__(self, other)
 
         features = {}
@@ -286,7 +286,7 @@ class GMMSurface(Surface):
             if not name in other.features:
                 continue
             features[name] = self.features[name] + other.features[name]
-        return GMMSurface(**features)
+        return MCSurface(**features)
 
     def freeze(self, nc=1, nb=20, cov="full"):
         from itertools import product
