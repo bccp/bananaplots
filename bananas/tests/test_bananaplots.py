@@ -28,12 +28,12 @@ def test_bananas():
             Z=bananas.Feature(3 + data[2], vmin=-5, vmax=5, peak=3.0),
             )
 
-    #s3 = (s1 + s2).freeze()
+    s3 = (s1 + s2).freeze()
     banana = bananas.Bananas()
 
     banana.add_surface(s1, label="S1", colorscheme='r')
     banana.add_surface(s2, label="S2", colorscheme='b')
-    #banana.add_surface(s3, label="S1 + S2", cmap=cm.Greens_r, compiler_options=dict(nc=2))
+    banana.add_surface(s3, label="S1 + S2", colorscheme='g', linestyle='--', compiler_options=dict(nc=2))
 
 #    banana.set_feature("X", range=(-6, 6))
 #    banana.set_feature("Y", range=(-3, 4))

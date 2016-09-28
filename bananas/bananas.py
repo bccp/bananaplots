@@ -232,6 +232,9 @@ class Bananas(object):
         return proxies, labels
 
 class Surface(object):
+    def __getitem__(self, name):
+        return self.features[name]
+
     pass
 
 class Feature(object):
@@ -259,9 +262,9 @@ class Feature(object):
 
     def __add__(self, other):
         return Feature(numpy.concatenate([self.data, other.data]),
-                    vmin=numpy.min(self.vmin, other.vmin),
-                    vmax=numpy.max(self.vmax, other.vmax),
-                    peak=self.peak if other.peak is None else other.peak)
+                    vmin=numpy.min([self.vmin, other.vmin]),
+                    vmax=numpy.max([self.vmax, other.vmax]),
+                    peak=None)
 
 class GMMSurface(Surface):
     """
@@ -280,17 +283,20 @@ class GMMSurface(Surface):
 
         features = {}
         for name in self.features:
-            if not name in other.name:
+            if not name in other.features:
                 continue
             features[name] = self.features[name] + other.features[name]
         return GMMSurface(**features)
 
-    def __getitem__(self, name):
-        return self.features[name]
-
     def freeze(self, nc=1, nb=20, cov="full"):
         from itertools import product
         cache = {}
+        features = {}
+        # freeze features
+        for f1 in self.features:
+            feature = self.features[f1]
+            features[f1] = Feature([], feature.vmin, feature.vmax, feature.peak)
+
         # freeze 1d models
         for f1 in self.features:
             cache[(f1, )] = self.compile([f1], nc, nb, cov)
@@ -303,7 +309,7 @@ class GMMSurface(Surface):
             cache[(f1, f2)] = m
             cache[(f2, f1)] = m
 
-        return FrozenSurface(cache, dict(nc=nc, nb=nb, cov=cov))
+        return FrozenSurface(features, cache, dict(nc=nc, nb=nb, cov=cov))
 
     def compile(self, features, nc=1, nb=20, cov="full", ):
         """ compile the GMM to a function that returns
@@ -373,7 +379,7 @@ class Marginalized(object):
         return numpy.interp(lnprob, x, y, left=1., right=0.)
 
 class FrozenSurface(Surface):
-    def __init__(self, cache, metadata):
+    def __init__(self, features, cache, metadata):
         """
             Creates a picklable Frozen surface from a picklable model and a cl mapping.
 
@@ -384,6 +390,7 @@ class FrozenSurface(Surface):
         """
         self.cache = cache
         self.metadata = metadata
+        self.features = features
 
     def __add__(self, other):
         raise TypeError("Cannot add two frozen surfaces")
