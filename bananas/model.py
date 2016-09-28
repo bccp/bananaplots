@@ -1,7 +1,7 @@
 import numpy
 # FIXME: copy the functions here
 
-from sklearn.mixture.gmm import log_multivariate_normal_density, logsumexp
+from sklearn.mixture.gmm import log_multivariate_normal_density, logsumexp, sample_gaussian
 
 class GMM(object):
     def __init__(self, weights, means, covs):
@@ -34,6 +34,35 @@ class GMM(object):
     def marginalize(self, axes):
         return GMM(self.weights, self.means[..., axes], self.covs[..., axes][..., axes, :])
 
+    def sample(self, size, random_state=None):
+        """Generate random samples from the model.
+        Returns
+        -------
+        X : array_like, shape (n_samples, n_features)
+            List of samples
+        """
+
+        if random_state is None:
+            random_state = numpy.random
+
+
+        X = numpy.empty(size, ('f8', (self.means.shape[1],)))
+        # decide which component to use for each sample
+        comps = random_state.choice(len(self.weights), p=self.weights, size=size)
+        # for each component, generate all needed samples
+        for comp in range(len(self.weights)):
+            # occurrences of current component in X
+            comp_in_X = (comp == comps)
+            # number of those occurrences
+            num_comp_in_X = comp_in_X.sum()
+            if num_comp_in_X > 0:
+                cv = self.covs[comp]
+                g = sample_gaussian(
+                    self.means[comp], cv, 'full',
+                    num_comp_in_X, random_state=random_state).T
+                X[comp_in_X] = g
+        return X
+
     @classmethod
     def fit(kls, nc, X):
         # FIXME: get rid of this and add weights support
@@ -60,7 +89,8 @@ class Confidence(object):
         return numpy.interp(sc, x, y, left=1., right=0.)
 
     @classmethod
-    def fit(kls, model, X, vmin=-5, vmax=0, nb=100):
+    def fit(kls, model, nsample=16*1024, vmin=-5, vmax=0, nb=100):
+        X = model.sample(nsample)
         sc = model.score(X)
         confidence_levels = 1 - numpy.logspace(vmin, vmax, num=nb)
         # FIXME: add weight support here

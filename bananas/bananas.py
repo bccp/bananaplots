@@ -270,11 +270,17 @@ class Feature(object):
 
 class MCSurface(Surface):
     """
-        A log-likelyhood surface generated from Gausian mixture.
+        A log-likelyhood surface represented by a Markov Chain sample.
+
+        Parameters
+        ----------
+        **features : dict
+            key: name of the feature,
+            value : a :py:class:`Feature` object or a 1-d numpy array.
+                    array will be cast to a :py:class:`Feature` object.
 
     """
     def __init__(self, **features):
-
         self.features = {}
         for name, feature in features.items():
             self.features[name] = Feature(feature)
@@ -290,30 +296,23 @@ class MCSurface(Surface):
             features[name] = self.features[name] + other.features[name]
         return MCSurface(**features)
 
-    def freeze(self, nc=1, nb=20, cov="full"):
-        from itertools import product
-        cache = {}
-        features = {}
-        # freeze features
-        for f1 in self.features:
-            feature = self.features[f1]
-            features[f1] = Feature([], feature.vmin, feature.vmax, feature.peak)
+    def freeze(self, nc=1, nb=20, **options):
+        data = []
+        names = []
+        for name in self.features:
+            # only 1d name is supported
+            feature = self.features[name]
+            data.append(feature.data.reshape(1, -1))
+            names.append((name, feature))
 
-        # freeze 1d models
-        for f1 in self.features:
-            cache[(f1, )] = self.compile([f1], nc, nb, cov)
+        X = numpy.concatenate(data, axis=0).T
 
-        # freeze 2d models
-        for f1, f2 in product(self.features, self.features):
-            if f1 == f2 : continue
-            if (f1, f2) in cache: continue
-            m = self.compile([f1, f2], nc, nb, cov) 
-            cache[(f1, f2)] = m
-            cache[(f2, f1)] = m
+        model = GMM.fit(nc, X)
+        conf = Confidence.fit(model, nb=nb)
 
-        return FrozenSurface(features, cache, dict(nc=nc, nb=nb, cov=cov))
+        return GMMSurface(names, model)
 
-    def compile(self, features, nc=1, nb=20, cov="full", ):
+    def compile(self, features, nc=1, nb=20):
         """ compile the GMM to a function that returns
             ln_prob and confidence level as a function of features.
 
@@ -343,12 +342,13 @@ class MCSurface(Surface):
         limits = numpy.array(limits)
 
         model = GMM.fit(nc, X)
-        conf = Confidence.fit(model, X)
+        conf = Confidence.fit(model)
 
         return Marginalized(model, conf, limits)
 
 class Marginalized(object):
     def __init__(self, model, conf, limits):
+        limits = numpy.array(limits)
         self.model = model
         self.conf = conf 
         self.mins  = limits[:, 0]
@@ -365,30 +365,31 @@ class Marginalized(object):
         lnprob[~mask] = - numpy.inf
         lnprob = lnprob.reshape(shape)
         return lnprob
-
     def confidence(self, *args):
         lnprob = self.lnprob(*args)
         return self.conf.score(lnprob)
 
-class FrozenSurface(Surface):
-    def __init__(self, features, cache, metadata):
-        """
-            Creates a picklable Frozen surface from a picklable model and a cl mapping.
-
-            Parameters ----------
-            clmapping : pairs of lnprob, confidence level.
-            model : a model.
-
-        """
-        self.cache = cache
-        self.metadata = metadata
-        self.features = features
-
-    def __add__(self, other):
-        raise TypeError("Cannot add two frozen surfaces")
+class GMMSurface(Surface):
+    """ A surface that is modelled by GMM. features is a list of (name, feature). """
+    def __init__(self, features, model):
+        self.features = dict(features)
+        self.names = [feature[0] for feature in features]
+        self.model = model
 
     def freeze(self):
         return self
 
-    def compile(self, features, **kwargs):
-        return self.cache[tuple(features)]
+    def compile(self, features, **options):
+        axes = []
+        for name in features:
+            axes.append(self.names.index(name))
+
+        limits = []
+        for ax, name in zip(axes, features):
+            feature = self.features[name]
+            limits.append((feature.vmin, feature.vmax))
+        limits = numpy.array(limits)
+
+        model = self.model.marginalize(axes)
+        conf = Confidence.fit(model)
+        return Marginalized(model, conf, limits)
