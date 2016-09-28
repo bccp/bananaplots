@@ -20,7 +20,7 @@ class GMM(object):
         if X.shape[1] != self.means.shape[1]:
             raise ValueError('The shape of X  is not compatible with self')
 
-        lpr = numpy.log(self.weights)) + \
+        lpr = numpy.log(self.weights) + \
               log_multivariate_normal_density(X,
                     self.means,
                     self.covs, 'full')
@@ -31,10 +31,16 @@ class GMM(object):
             return logprob, responsibilities
         return logprob
 
+    def marginalize(self, axes):
+        return GMM(self.weights, self.means[..., axes], self.covs[..., axes][..., axes, :])
+
     @classmethod
     def fit(kls, nc, X):
         # FIXME: get rid of this and add weights support
         from sklearn import mixture
+
+        # XXX: Do not use DPGMM because the normalization is buggy
+        # https://github.com/scikit-learn/scikit-learn/issues/7371
 
         model = mixture.GMM(nc, covariance_type='full', n_iter=100)
         model.fit(X)
@@ -45,15 +51,14 @@ class GMM(object):
         return kls(model.weights_, model.means_, model.covars_)
 
 class Confidence(object):
-    def __init__(self, model, confidence_table)
+    def __init__(self, model, confidence_table):
         self.model = model
         self.confidence_table = confidence_table
         
-    def score(self, X):
+    def score(self, sc):
         x, y = self.confidence_table
-        sc = self.model.score(X)
         return numpy.interp(sc, x, y, left=1., right=0.)
-    
+
     @classmethod
     def fit(kls, model, X, vmin=-5, vmax=0, nb=100):
         sc = model.score(X)

@@ -2,6 +2,8 @@ import numpy
 
 __version__ = "0.0.3"
 
+from .model import GMM, Confidence
+
 def _sorteditems(d, orderby):
     """ return items from a dict of dict, sorted by the orderby item of the dict """
     s = sorted([(i[orderby], k) for k, i in d.items()])
@@ -336,47 +338,37 @@ class MCSurface(Surface):
             feature = self.features[name]
             data.append(feature.data.reshape(1, -1))
             limits.append((feature.vmin, feature.vmax))
-        data = numpy.concatenate(data, axis=0)
+
+        X = numpy.concatenate(data, axis=0).T
         limits = numpy.array(limits)
 
-        from sklearn import mixture
+        model = GMM.fit(nc, X)
+        conf = Confidence.fit(model, X)
 
-        # XXX: Do not use DPGMM because the normalization is buggy
-        # https://github.com/scikit-learn/scikit-learn/issues/7371
-        model = mixture.GMM(nc, covariance_type=cov, n_iter=100)
-        model.fit(data.T)
-
-        if not model.converged_:
-            raise ValueError("Your data is strange. Gaussian mixture failed to converge")
-
-        lnprob = model.score(data.T)
-        confidence_levels = 1 - numpy.logspace(-5, 0, num=nb)
-        lnprob_cl = numpy.percentile(lnprob, 100 - confidence_levels * 100.)
-        confidence_table = numpy.array([lnprob_cl, confidence_levels])
-
-        return Marginalized(model, confidence_table, limits)
+        return Marginalized(model, conf, limits)
 
 class Marginalized(object):
-    def __init__(self, model, confidence_table, limits):
+    def __init__(self, model, conf, limits):
         self.model = model
-        self.confidence_table = confidence_table 
+        self.conf = conf 
         self.mins  = limits[:, 0]
         self.maxes = limits[:, 1]
+
     def lnprob(self, *args):
         args = numpy.array(numpy.broadcast_arrays(*args), copy=True)
         shape = args[0].shape
         args = args.reshape(len(args), -1)
         mask = (args >= self.mins[:, None]).all(axis=0)
         mask &= (args <= self.maxes[:, None]).all(axis=0)
-        lnprob = self.model.score(args.T)
+        X = args.T
+        lnprob = self.model.score(X)
         lnprob[~mask] = - numpy.inf
         lnprob = lnprob.reshape(shape)
         return lnprob
 
     def confidence(self, *args):
-        x, y = self.confidence_table
         lnprob = self.lnprob(*args)
-        return numpy.interp(lnprob, x, y, left=1., right=0.)
+        return self.conf.score(lnprob)
 
 class FrozenSurface(Surface):
     def __init__(self, features, cache, metadata):
