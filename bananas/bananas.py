@@ -36,7 +36,6 @@ class Bananas(object):
                     linestyle='-',
                     color=None,
                     levels=[0.68, 0.95],
-                    compiler_options={},
                     )
             self._unique = self._unique + 10
 
@@ -117,13 +116,12 @@ class Bananas(object):
         for surface, attrs in _sorteditems(self.surfaces, 'order'):
             cmap = self.get_surface_attr(surface, 'cmap')
             color = self.get_surface_attr(surface, 'color')
-            compiler_options = self.get_surface_attr(surface, 'compiler_options')
             linestyle = self.get_surface_attr(surface, 'linestyle')
             linewidth = self.get_surface_attr(surface, 'linewidth')
             style = dict(linestyle=linestyle, linewidth=linewidth)
 
             levels = self.get_surface_attr(surface, 'levels')
-            m = surface.compile((f1, f2), **compiler_options)
+            m = surface.marginalize((f1, f2))
             Z = m.confidence(X, Y)
             if filled:
                 CS = axes.contourf(X, Y, Z,
@@ -157,12 +155,11 @@ class Bananas(object):
             label = self.get_surface_attr(surface, 'label')
             cmap = self.get_surface_attr(surface, 'cmap')
             color = self.get_surface_attr(surface, 'color')
-            compiler_options = self.get_surface_attr(surface, 'compiler_options')
             linestyle = self.get_surface_attr(surface, 'linestyle')
             linewidth = self.get_surface_attr(surface, 'linewidth')
             style = dict(linestyle=linestyle, linewidth=linewidth)
 
-            m = surface.compile((f1, ), **compiler_options)
+            m = surface.marginalize((f1, )) 
             Z = numpy.exp(m.lnprob(x))
             axes.plot(x, Z, label=label, color=color, **style)
 
@@ -296,55 +293,23 @@ class MCSurface(Surface):
             features[name] = self.features[name] + other.features[name]
         return MCSurface(**features)
 
-    def freeze(self, nc=1, nb=20, **options):
+    def compile(self, nc=1, nb=20, **options):
         data = []
         names = []
+        limits = []
         for name in self.features:
             # only 1d name is supported
             feature = self.features[name]
             data.append(feature.data.reshape(1, -1))
             names.append((name, feature))
-
-        X = numpy.concatenate(data, axis=0).T
-
-        model = GMM.fit(nc, X)
-        conf = Confidence.fit(model, nb=nb)
-
-        return GMMSurface(names, model)
-
-    def compile(self, features, nc=1, nb=20):
-        """ compile the GMM to a function that returns
-            ln_prob and confidence level as a function of features.
-
-            We evaluate the log probability on all data points,
-            then look for the percentiles. 
-
-            Parameters
-            ----------
-            nb : number of bins in the interplation from ln_prob to CL
-            nc : number of components to model the distribution.
-            cov : type of covariance. 'full', 'diag', 'tied', 'spherical'
-
-            Returns
-            -------
-            lnprob, confidence
-
-        """
-        data = []
-        limits = []
-        for name in features:
-            # only 1d name is supported
-            feature = self.features[name]
-            data.append(feature.data.reshape(1, -1))
             limits.append((feature.vmin, feature.vmax))
 
         X = numpy.concatenate(data, axis=0).T
-        limits = numpy.array(limits)
 
-        model = GMM.fit(nc, X)
-        conf = Confidence.fit(model)
+        model = GMM.fit(nc, X, limits)
+        conf = Confidence.fit(model, nb=nb)
 
-        return Marginalized(model, conf, limits)
+        return GMMSurface(names, model)
 
 class Marginalized(object):
     def __init__(self, model, conf, limits):
@@ -376,10 +341,7 @@ class GMMSurface(Surface):
         self.names = [feature[0] for feature in features]
         self.model = model
 
-    def freeze(self):
-        return self
-
-    def compile(self, features, **options):
+    def marginalize(self, features, **options):
         axes = []
         for name in features:
             axes.append(self.names.index(name))
@@ -391,5 +353,5 @@ class GMMSurface(Surface):
         limits = numpy.array(limits)
 
         model = self.model.marginalize(axes)
-        conf = Confidence.fit(model)
+        conf = Confidence.fit(model, **options)
         return Marginalized(model, conf, limits)

@@ -16,28 +16,32 @@ def test_bananas():
     """ Overall integration test """
 
     numpy.random.seed(1234)
-    data = normal(size=(3, 2000))
+    data = normal(size=(3, 10000))
+    data[2][data[2] < 0] += 3
+
     s1 = bananas.MCSurface(
-            X=bananas.Feature(data[0], vmin=-5, vmax=5, peak=0.0),
-            Y=bananas.Feature(data[1], vmin=-5, vmax=5, peak=0.0),
-            Z=bananas.Feature(data[2], vmin=-5, vmax=5, peak=0.0),
+            X=bananas.Feature(data[0], peak=0.0),
+            Y=bananas.Feature(data[1], peak=0.0),
+            Z=bananas.Feature(data[2], peak=0.0),
         )
     s2 = bananas.MCSurface(
-            X=bananas.Feature(1 + data[0], vmin=-5, vmax=5, peak=1.0),
-            Y=bananas.Feature(2 + data[1], vmin=-5, vmax=5, peak=2.0),
-            Z=bananas.Feature(3 + data[2], vmin=-5, vmax=5, peak=3.0),
+            X=bananas.Feature(1 + data[0], peak=1.0),
+            Y=bananas.Feature(2 + data[1], peak=2.0),
+            Z=bananas.Feature(3 + data[2], peak=3.0),
             )
 
-    s3 = (s1 + s2).freeze()
+    s3 = (s1 + s2).compile(nc=10)
+    s1 = s1.compile(nc=10)
+    s2 = s2.compile(nc=10)
     banana = bananas.Bananas()
 
     banana.add_surface(s1, label="S1", colorfamily='r')
     banana.add_surface(s2, label="S2", colorfamily='b')
-    banana.add_surface(s3, label="S1 + S2", colorfamily='g', linestyle='--', compiler_options=dict(nc=2))
+    banana.add_surface(s3, label="S1 + S2", colorfamily='g', linestyle='--')
 
 #    banana.set_feature("X", range=(-6, 6))
 #    banana.set_feature("Y", range=(-3, 4))
-#    banana.set_feature("Z", range=(-6, 4))
+    banana.set_feature("Z", range=(-4, 4))
 
     fig = Figure()
 
@@ -78,7 +82,7 @@ def test_freeze():
             )
 
     import pickle
-    f2 = s2.freeze(nc=20, nb=100)
+    f2 = s2.compile(nc=20, nb=100)
     s = pickle.dumps(f2)
     print(len(s))
     f2 = pickle.loads(s)
@@ -98,9 +102,9 @@ def test_1d():
     #s3 = (s1 + s2).freeze()
     banana = bananas.Bananas()
 
-    banana.add_surface(s1, label="S1", cmap=cm.Reds_r)
-    banana.add_surface(s2, label="S2", cmap=cm.Blues_r)
-    #banana.add_surface(s3, label="S1 + S2", cmap=cm.Greens_r, compiler_options=dict(nc=2))
+    banana.add_surface(s1.compile(), label="S1", cmap=cm.Reds_r)
+    banana.add_surface(s2.compile(), label="S2", cmap=cm.Blues_r)
+    #banana.add_surface(s3.compile(), label="S1 + S2", cmap=cm.Greens_r, compiler_options=dict(nc=2))
 
     banana.set_feature("X", range=(-6, 6))
     banana.set_feature("Y", range=(-3, 3))
