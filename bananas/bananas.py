@@ -217,7 +217,7 @@ class GMMSurface(Surface):
 
         data = numpy.concatenate(data, axis=0)
 
-        from sklearn import mixture
+        from . import gmm as mixture
 
         # XXX: Do not use DPGMM because the normalization is buggy
         # https://github.com/scikit-learn/scikit-learn/issues/7371
