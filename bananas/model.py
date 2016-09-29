@@ -46,8 +46,6 @@ class GMM(object):
         X = numpy.array(X)
         if X.ndim == 1:
             X = X[:, None]
-        if X.size == 0:
-            return numpy.array([]), numpy.empty((0, len(self.weights)))
 
         if X.shape[1] != self.means.shape[1]:
             raise ValueError('The shape of X  is not compatible with self')

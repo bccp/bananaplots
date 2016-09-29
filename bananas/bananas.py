@@ -15,7 +15,7 @@ class Bananas(object):
         self._unique = 0
         self.surfaces = {}
 
-    def add_surface(self, surface, **attrs):
+    def set_surface(self, surface, **attrs):
         """
             Add a surface with attributes.
             
@@ -234,6 +234,14 @@ class Surface(object):
     def __getitem__(self, name):
         return self.features[name]
 
+    def marginalize(self, features, **options):
+        axes = []
+        for name in features:
+            axes.append(self.names.index(name))
+
+        model = self.model.marginalize(axes)
+        conf = Confidence.fit(model, **options)
+        return Marginalized(model, conf)
     pass
 
 class Feature(object):
@@ -265,7 +273,7 @@ class Feature(object):
                     vmax=numpy.max([self.vmax, other.vmax]),
                     peak=None)
 
-class MCSurface(Surface):
+class MCChain(Surface):
     """
         A log-likelyhood surface represented by a Markov Chain sample.
 
@@ -283,25 +291,23 @@ class MCSurface(Surface):
             self.features[name] = Feature(feature)
 
     def __add__(self, other):
-        if not isinstance(other, MCSurface):
-            return Surface.__add__(self, other)
-
         features = {}
         for name in self.features:
             if not name in other.features:
                 continue
             features[name] = self.features[name] + other.features[name]
-        return MCSurface(**features)
+        return MCChain(**features)
 
-    def compile(self, nc=1, nb=20, **options):
+    def compile(chain, nc=1, nb=20):
         data = []
         names = []
         limits = []
-        for name in self.features:
+        for name in chain.features:
             # only 1d name is supported
-            feature = self.features[name]
+            feature = chain.features[name]
             data.append(feature.data.reshape(1, -1))
-            names.append((name, feature))
+            # remove the data from feature
+            names.append((name, Feature([], feature.vmin, feature.vmax, feature.peak)))
             limits.append((feature.vmin, feature.vmax))
 
         X = numpy.concatenate(data, axis=0).T
@@ -311,47 +317,96 @@ class MCSurface(Surface):
 
         return GMMSurface(names, model)
 
+
 class Marginalized(object):
-    def __init__(self, model, conf, limits):
-        limits = numpy.array(limits)
+    def __init__(self, model, conf):
         self.model = model
         self.conf = conf 
-        self.mins  = limits[:, 0]
-        self.maxes = limits[:, 1]
 
     def lnprob(self, *args):
         args = numpy.array(numpy.broadcast_arrays(*args), copy=True)
         shape = args[0].shape
         args = args.reshape(len(args), -1)
-        mask = (args >= self.mins[:, None]).all(axis=0)
-        mask &= (args <= self.maxes[:, None]).all(axis=0)
         X = args.T
         lnprob = self.model.score(X)
-        lnprob[~mask] = - numpy.inf
         lnprob = lnprob.reshape(shape)
         return lnprob
+
     def confidence(self, *args):
         lnprob = self.lnprob(*args)
         return self.conf.score(lnprob)
 
-class GMMSurface(Surface):
-    """ A surface that is modelled by GMM. features is a list of (name, feature). """
-    def __init__(self, features, model):
+class CombinedSurface(Surface):
+    def __init__(self, surfaces):
+        names = []
+        for s in surfaces:
+            names.extend(s.names)
+        common = list(set(names))
+
+        axes = []
+        for s in surfaces:
+            axes.append([ s.names.index(name) for name in common])
+
+        features = []
+        for name in common:
+            f = reduce(lambda x, y : x + y, [s.features[name] for s in surfaces])
+            features.append((name, f))
+
         self.features = dict(features)
-        self.names = [feature[0] for feature in features]
-        self.model = model
+        self.names = common
+
+        models = [surface.model.marginalize(axes0) for surface, axes0 in zip(surfaces, axes)]
+        self.model = CombinedModel(models)
 
     def marginalize(self, features, **options):
         axes = []
         for name in features:
             axes.append(self.names.index(name))
 
-        limits = []
-        for ax, name in zip(axes, features):
-            feature = self.features[name]
-            limits.append((feature.vmin, feature.vmax))
-        limits = numpy.array(limits)
-
         model = self.model.marginalize(axes)
         conf = Confidence.fit(model, **options)
-        return Marginalized(model, conf, limits)
+        return Marginalized(model, conf)
+
+class CombinedModel(object):
+    def __init__(self, models):
+        self.models = models
+
+    def score(self, X):
+        return sum([model.score(X) for model in self.models])
+
+    def marginalize(self, axes):
+        return CombinedModel([
+            model.marginalize(axes) for model in self.models])
+
+    def sample(self, nsample, random_state=None):
+        if random_state is None:
+            random_state = numpy.random
+
+        def once(size):
+            X = self.models[0].sample(size, random_state)
+            nf = X.shape[-1]
+            lnprob = sum([model.score(X) for model in self.models[1:]])
+            prob = numpy.exp(lnprob)
+            prob /= prob.max()
+            keep = random_state.rand(len(X)) < prob
+            return X[keep].reshape(-1, nf)
+        g = once(nsample)
+        ng = nsample
+        while len(g) < nsample:
+            togen = (nsample - len(g)) * ng // len(g)
+            g1 = once(togen)
+            ng = ng + togen
+            g = numpy.append(g, g1, axis=0)
+        return g[:nsample]
+
+class GMMSurface(Surface):
+    """ A surface that is modelled by GMM. features is a list of (name, feature). """
+
+    def __init__(self, features, model):
+        self.features = dict(features)
+        self.names = [feature[0] for feature in features]
+        self.model = model
+
+    def __mul__(self, other):
+        return CombinedSurface([self, other])
+
