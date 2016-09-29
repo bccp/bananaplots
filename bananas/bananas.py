@@ -3,7 +3,7 @@ import numpy
 __version__ = "0.0.3"
 
 from .model import GMM, Confidence, CombinedModel
-
+from functools import reduce
 def _sorteditems(d, orderby):
     """ return items from a dict of dict, sorted by the orderby item of the dict """
     s = sorted([(i[orderby], k) for k, i in d.items()])
@@ -349,7 +349,7 @@ class CombinedSurface(Surface):
 
         features = []
         for name in common:
-            f = sum([s.features[name] for s in surfaces])
+            f = reduce(lambda x, y: x + y, [s.features[name] for s in surfaces])
             features.append((name, f))
 
         self.features = dict(features)

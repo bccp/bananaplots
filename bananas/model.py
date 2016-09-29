@@ -1,10 +1,11 @@
 import numpy
 # FIXME: copy the functions here
 
-from sklearn.mixture.gmm import log_multivariate_normal_density, logsumexp, sample_gaussian
-def sample_gaussian2(means, cv, mode, size, random_state, mins, maxes):
-    def once(size):
-        g = sample_gaussian(means, cv, mode, size, random_state)
+from sklearn.mixture.gmm import log_multivariate_normal_density, logsumexp
+
+def sample_gaussian2(means, cv, size, random_state, mins, maxes):
+    def once(size1):
+        g = random_state.multivariate_normal(means, cv, size1).T
         g = g.reshape(len(means), -1)
         mask = (g >= mins[:, None]).all(axis=0)
         mask &= (g <= maxes[:, None]).all(axis=0)
@@ -96,7 +97,7 @@ class GMM(object):
             if num_comp_in_X > 0:
                 cv = self.covs[comp]
                 g = sample_gaussian2(
-                    self.means[comp], cv, 'full',
+                    self.means[comp], cv,
                     num_comp_in_X, random_state, mins, maxes).T
                 X[comp_in_X] = g
         return X
