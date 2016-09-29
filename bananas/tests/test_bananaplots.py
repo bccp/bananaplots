@@ -32,8 +32,8 @@ def test_bananas():
 
     c3 = (c1 + c2)
     banana = bananas.Bananas()
-    s1 = c1.compile(nc=20)
-    s2 = c2.compile(nc=20)
+    s1 = c1.compile(nc=10)
+    s2 = c2.compile(nc=10)
     s3 = s1 * s2
 
     banana.set_surface(s1, label="S1", colorfamily='r')

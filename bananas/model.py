@@ -128,7 +128,7 @@ class Confidence(object):
         return numpy.interp(sc, x, y, left=1., right=0.)
 
     @classmethod
-    def fit(kls, model, nsample=16*1024, vmin=-5, vmax=0, nb=100):
+    def fit(kls, model, nsample=4*1024, vmin=-5, vmax=0, nb=100):
         X = model.sample(nsample)
         sc = model.score(X)
         confidence_levels = 1 - numpy.logspace(vmin, vmax, num=nb)
