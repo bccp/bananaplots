@@ -2,7 +2,7 @@ import numpy
 
 __version__ = "0.0.3"
 
-from .model import GMM, Confidence
+from .model import GMM, Confidence, CombinedModel
 
 def _sorteditems(d, orderby):
     """ return items from a dict of dict, sorted by the orderby item of the dict """
@@ -349,7 +349,7 @@ class CombinedSurface(Surface):
 
         features = []
         for name in common:
-            f = reduce(lambda x, y : x + y, [s.features[name] for s in surfaces])
+            f = sum([s.features[name] for s in surfaces])
             features.append((name, f))
 
         self.features = dict(features)
@@ -367,37 +367,6 @@ class CombinedSurface(Surface):
         conf = Confidence.fit(model, **options)
         return Marginalized(model, conf)
 
-class CombinedModel(object):
-    def __init__(self, models):
-        self.models = models
-
-    def score(self, X):
-        return sum([model.score(X) for model in self.models])
-
-    def marginalize(self, axes):
-        return CombinedModel([
-            model.marginalize(axes) for model in self.models])
-
-    def sample(self, nsample, random_state=None):
-        if random_state is None:
-            random_state = numpy.random
-
-        def once(size):
-            X = self.models[0].sample(size, random_state)
-            nf = X.shape[-1]
-            lnprob = sum([model.score(X) for model in self.models[1:]])
-            prob = numpy.exp(lnprob)
-            prob /= prob.max()
-            keep = random_state.rand(len(X)) < prob
-            return X[keep].reshape(-1, nf)
-        g = once(nsample)
-        ng = nsample
-        while len(g) < nsample:
-            togen = (nsample - len(g)) * ng // len(g)
-            g1 = once(togen)
-            ng = ng + togen
-            g = numpy.append(g, g1, axis=0)
-        return g[:nsample]
 
 class GMMSurface(Surface):
     """ A surface that is modelled by GMM. features is a list of (name, feature). """
